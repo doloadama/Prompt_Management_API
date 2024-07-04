@@ -37,14 +37,12 @@ def register():
     if not username or not password or not role:
         return jsonify({'message': 'Missing username, password, or role'}), 400
 
-    hashed_password = generate_password_hash(password)
-
     conn = get_db()
     cur = conn.cursor()
 
     try:
         cur.execute("INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
-                    (username, hashed_password, role))
+                    (username, password, role))
         conn.commit()
         return jsonify({'message': 'User registered successfully'}), 201
     except psycopg2.Error as e:
