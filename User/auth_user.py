@@ -2,21 +2,11 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import psycopg2
 import psycopg2.extras
-
+from Admin.admin import *
 auth_user = Blueprint('auth_user', __name__)
 
-# Configuration de la base de données PostgreSQL
-DB_HOST = 'localhost'
-DB_NAME = 'PromptDB'
-DB_USER = 'postgres'
-DB_PASS = 'Toto123'
 
-def get_db():
-    conn = psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
-    return conn
-
-
-@auth_user.route('/login', methods=['POST'])
+@auth_user.route('/login_user', methods=['POST'])
 def login():
     data = request.get_json()
     username = data.get('username')
