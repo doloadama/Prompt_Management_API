@@ -11,7 +11,6 @@ app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'toto123'
 jwt = JWTManager(app)
 
-
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
@@ -21,6 +20,7 @@ app.register_blueprint(user_bp, url_prefix='/user_bp')
 @app.route('/')
 def index():
     return 'Hello, world!'
+
 
 if __name__ == '__main__':
     app.run(debug=True)

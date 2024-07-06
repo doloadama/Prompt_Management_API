@@ -54,7 +54,7 @@ def ajouter_prompt():
 
 @user_bp.route('/AlterPrompt', methods=['POST'])
 @user_required
-def ajouter_prompt():
+def alter_prompt():
     data = request.get_json()
     content = data.get('content')
     status = "en attente"
