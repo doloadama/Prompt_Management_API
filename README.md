@@ -72,6 +72,8 @@ Develop a RESTful API using Flask to manage users and text prompts. The API will
 
 - Visualize interactions between users, administrators, and the system.
 - Include main actions such as account creation, prompt management, rating, and voting.
+![Capture d’écran du 2024-07-06 10-20-43.png](Capture%20d%E2%80%99%C3%A9cran%20du%202024-07-06%2010-20-43.png)
+
 
 ### Class Diagram
 
