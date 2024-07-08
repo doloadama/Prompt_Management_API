@@ -19,10 +19,10 @@ def login():
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
-        cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+        cur.execute("SELECT * FROM users WHERE username = %s AND password_hash = %s", (username, password))
         user = cur.fetchone()
 
-        if user and password:
+        if user and password and user['role'] != 'admin':
             access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
             return jsonify({'access_token': access_token}), 200
         else:

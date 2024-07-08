@@ -17,6 +17,7 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(auth_user, url_prefix='/auth_user')
 app.register_blueprint(user_bp, url_prefix='/user_bp')
 
+
 @app.route('/')
 def index():
     return 'Hello, world!'

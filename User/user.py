@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import psycopg2
 import psycopg2.extras
+from functools import wraps
 
 user_bp = Blueprint('user_bp', __name__)
 
@@ -16,6 +17,7 @@ def get_db():
     return conn
 
 def user_required(fn):
+    @wraps(fn)
     @jwt_required()
     def wrapper(*args, **kwargs):
         current_user = get_jwt_identity()
@@ -51,10 +53,9 @@ def ajouter_prompt():
         cur.close()
         conn.close()
 
-
-@user_bp.route('/AlterPrompt', methods=['POST'])
+@user_bp.route('/EditPrompt/<int:prompt_id>', methods=['PUT'])
 @user_required
-def alter_prompt():
+def editer_prompt(prompt_id):
     data = request.get_json()
     content = data.get('content')
     status = "en attente"
@@ -66,12 +67,14 @@ def alter_prompt():
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("ALTER TABLE prompts (content, status, user_id) VALUES (%s, %s, %s) RETURNING content",
-                    (content, status, get_jwt_identity()['id']))
-        prompt = cur.fetchone()
-        conn.commit()
+        cur.execute("UPDATE prompts SET content = %s, status = %s WHERE id = %s AND user_id = %s RETURNING content",
+                    (content, status, prompt_id, get_jwt_identity()['id']))
+        updated_prompt = cur.fetchone()
+        if updated_prompt is None:
+            return jsonify({'message': 'Prompt not found or not authorized to edit'}), 404
 
-        return jsonify({'message': prompt['content']}), 201
+        conn.commit()
+        return jsonify({'message': updated_prompt['content']}), 200
     except psycopg2.Error as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 500
