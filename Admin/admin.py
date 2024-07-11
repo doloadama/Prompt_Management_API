@@ -62,23 +62,23 @@ def approve_prompt(prompt_id):
         return jsonify({'error': 'Status is required'}), 400
 
     status = data['status']
-
+    validated = "True"
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
         cur.execute("""
-            INSERT INTO prompts (content, status, user_id)
-            SELECT content, %s, user_id
+            INSERT INTO prompts (content, status, user_id, validated)
+            SELECT content, %s, user_id, %s
             FROM temp_prompts
             WHERE id = %s AND status = 'en attente'
             RETURNING id
-        """, (status, prompt_id))
+        """, (status, prompt_id, validated))
 
         approved_prompt = cur.fetchone()
 
         if approved_prompt is None:
-            return jsonify({'message': 'Prompt not found or not in en attente status'}), 404
+            return jsonify({'message': 'Prompt not found or not in en waiting status'}), 404
 
         cur.execute("DELETE FROM temp_prompts WHERE id = %s", (prompt_id,))
         conn.commit()

@@ -143,3 +143,24 @@ def display_prompt(prompt_id):
         # Assurez-vous de fermer le curseur et la connexion
         cur.close()
         conn.close()
+
+@user_bp.route('/RatePrompt/<int:prompt_id>', methods=['POST'])
+@user_required
+def rate_prompt(prompt_id):
+
+    data = request.get_json()
+    rate = data.get('rate')
+
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        insert_query = """
+        INSERT INTO ratings (prompt_id, rating) 
+        VALUES (%s, %s, %s)
+        """
+        cur.execute(insert_query, (prompt_id, rate))
+        return jsonify({'message': f'Rating {rate} has been added to prompt'}), 201
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500

@@ -79,6 +79,7 @@ Develop a RESTful API using Flask to manage users and text prompts. The API will
 
 - Model main entities (User, Group, Prompt) and their relationships.
 - Integrate prompt states and possible actions.
+![img.png](img.png)
 
 ### Planning with Trello
 
