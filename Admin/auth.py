@@ -3,17 +3,9 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 import psycopg2
 import psycopg2.extras
 
+from config import get_db
+
 auth_bp = Blueprint('auth', __name__)
-
-# Configuration de la base de données PostgreSQL
-DB_HOST = 'localhost'
-DB_NAME = 'PromptDB'
-DB_USER = 'postgres'
-DB_PASS = 'Toto123'
-
-def get_db():
-    conn = psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
-    return conn
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -32,9 +24,11 @@ def login():
         cur.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
 
-        if user and password:
+        if user and password and user['role'] != 'user':
             access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
             return jsonify({'access_token': access_token}), 200
+        elif user['role'] == 'user':
+            return jsonify({'message': 'User not an admin'}), 401
         else:
             return jsonify({'message': 'Invalid username or password'}), 401
     except psycopg2.Error as e:

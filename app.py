@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
+
 # Importer et enregistrer les blueprints d'authentification et d'administration
 from Admin.auth import auth_bp
 from Admin.admin import admin_bp

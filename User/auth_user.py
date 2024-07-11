@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import psycopg2
 import psycopg2.extras
-from Admin.admin import *
+from config import get_db
+
 auth_user = Blueprint('auth_user', __name__)
 
 
@@ -25,6 +26,8 @@ def login():
         if user and password and user['role'] != 'admin':
             access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
             return jsonify({'access_token': access_token}), 200
+        elif user['role'] == 'admin' :
+            return jsonify({'message': 'This user is an admin'}), 401
         else:
             return jsonify({'message': 'Invalid username or password'}), 401
     except psycopg2.Error as e:
