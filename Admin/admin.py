@@ -28,7 +28,7 @@ def admin_register():
     username = data.get('username')
     password = data.get('password')
     role = data.get('role')
-
+    password = generate_password_hash(password)
     if not username or not password or not role:
         return jsonify({'message': 'Missing username, password, or role'}), 400
 
@@ -43,7 +43,6 @@ def admin_register():
                         (username, password, role))
             conn.commit()
             return jsonify({'message': 'User registered successfully'}), 201
-
         except psycopg2.Error as e:
             conn.rollback()
             return jsonify({'error': str(e)}), 500

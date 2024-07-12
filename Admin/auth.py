@@ -24,11 +24,19 @@ def login():
         cur.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
 
-        if user and password and user['role'] != 'user':
-            access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
-            return jsonify({'access_token': access_token}), 200
-        elif user['role'] == 'user':
-            return jsonify({'message': 'User not an admin'}), 401
+        if user:
+            # Vérifiez le mot de passe (ici on suppose que le mot de passe est en clair, vous devriez utiliser un hash)
+            if user['password_hash'] == password:
+                if user['role'] == 'admin':
+                    access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
+                    return jsonify({'access_token': access_token}), 200
+                elif user['role'] == 'user':
+                    access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
+                    return jsonify({'access_token': access_token}), 200
+                else:
+                    return jsonify({'message': 'Invalid role'}), 403
+            else:
+                return jsonify({'message': 'Invalid username or password'}), 401
         else:
             return jsonify({'message': 'Invalid username or password'}), 401
     except psycopg2.Error as e:
@@ -36,7 +44,6 @@ def login():
     finally:
         cur.close()
         conn.close()
-
 
 @auth_bp.route('/protected', methods=['GET'])
 @jwt_required()
