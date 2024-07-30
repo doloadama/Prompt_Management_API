@@ -67,13 +67,12 @@ def approve_prompt(prompt_id):
 
     try:
         cur.execute("""
-            INSERT INTO prompts (content, status, user_id, validated)
-            SELECT content, %s, user_id, %s
-            FROM temp_prompts
-            WHERE id = %s AND status = 'en attente'
-            RETURNING id
-        """, (status, prompt_id, validated))
-
+                    INSERT INTO prompts (content, status, user_id, validated, keyword)
+                    SELECT content, %s, user_id, %s, keyword
+                    FROM temp_prompts
+                    WHERE id = %s AND status = 'en attente'
+                    RETURNING id
+                """, (status, validated, prompt_id))
         approved_prompt = cur.fetchone()
 
         if approved_prompt is None:

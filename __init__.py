@@ -1,5 +1,6 @@
 from flask import Flask
 
+from Admin import admin
 
 app = Flask(__name__)
 

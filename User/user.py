@@ -4,7 +4,7 @@ import psycopg2
 import psycopg2.extras
 from functools import wraps
 from config import get_db
-
+import jinja2
 
 user_bp = Blueprint('user_bp', __name__)
 
@@ -17,13 +17,16 @@ def user_required(fn):
         if current_user['role'] != 'user':
             return jsonify({'message': 'User access required'}), 403
         return fn(*args, **kwargs)
+
     return wrapper
+
 
 @user_bp.route('/AddPrompt', methods=['POST'])
 @user_required
 def add_prompt():
     data = request.get_json()
     content = data.get('content')
+    keyword = data.get('keyword')
     status = "en attente"
 
     if not content:
@@ -33,8 +36,9 @@ def add_prompt():
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("INSERT INTO temp_prompts (content, status, user_id) VALUES (%s, %s, %s) RETURNING content",
-                    (content, status, get_jwt_identity()['id']))
+        cur.execute("INSERT INTO temp_prompts (content, status, user_id, keyword) VALUES (%s, %s, %s, %s) RETURNING "
+                    "content",
+                    (content, status, get_jwt_identity()['id'], keyword), )
         prompt = cur.fetchone()
         conn.commit()
 
@@ -45,6 +49,7 @@ def add_prompt():
     finally:
         cur.close()
         conn.close()
+
 
 @user_bp.route('/EditPrompt/<int:prompt_id>', methods=['PUT'])
 @user_required
@@ -60,8 +65,8 @@ def edit_prompt(prompt_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("UPDATE temp_prompts SET content = %s, status = %s WHERE id = %s AND user_id = %s RETURNING content",
-                    (content, status, prompt_id, get_jwt_identity()['id']))
+        cur.execute((content, status, prompt_id, get_jwt_identity()['id']),
+                    "UPDATE temp_prompts SET content = %s, status = %s WHERE id = %s AND user_id = %s RETURNING content")
         updated_prompt = cur.fetchone()
         if updated_prompt is None:
             return jsonify({'message': 'Prompt not found or not authorized to edit'}), 404
@@ -74,6 +79,7 @@ def edit_prompt(prompt_id):
     finally:
         cur.close()
         conn.close()
+
 
 @user_bp.route('/VotePrompt/<int:prompt_id>', methods=['PUT'])
 @user_required
@@ -100,6 +106,7 @@ def vote_prompt(prompt_id):
         cur.close()
         conn.close()
 
+
 @user_bp.route('/Display_all_Prompt', methods=['GET'])
 @user_required
 def display_prompt_all():
@@ -110,7 +117,6 @@ def display_prompt_all():
         cur.execute('SELECT id, content FROM prompts')
         prompts = cur.fetchall()
 
-
         return jsonify({'prompts': prompts}), 200
 
     except Exception as e:
@@ -122,18 +128,21 @@ def display_prompt_all():
         cur.close()
         conn.close()
 
-@user_bp.route('/DisplayPrompt/<int:prompt_id>', methods=['GET'])
+
+@user_bp.route('/DisplayPrompt', methods=['GET'])
 @user_required
-def display_prompt(prompt_id):
+def display_prompt():
+    data = request.get_json()
+    keyword = data.get('keyword')
+
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute('SELECT * FROM prompts')
+        cur.execute('SELECT * FROM prompts WHERE keyword = %s', (keyword,))
         prompts = cur.fetchall()
 
-
-        return jsonify({'prompts': prompts}), 200
+        return jsonify({'prompts': prompts}, {'message': 'Prompt registered successfully!'}), 200
 
     except Exception as e:
         # Gestion des erreurs
@@ -144,23 +153,30 @@ def display_prompt(prompt_id):
         cur.close()
         conn.close()
 
+
 @user_bp.route('/RatePrompt/<int:prompt_id>', methods=['POST'])
 @user_required
 def rate_prompt(prompt_id):
-
     data = request.get_json()
     rate = data.get('rate')
 
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    try:
-        insert_query = """
-        INSERT INTO ratings (prompt_id, rating) 
-        VALUES (%s, %s, %s)
-        """
-        cur.execute(insert_query, (prompt_id, rate))
-        return jsonify({'message': f'Rating {rate} has been added to prompt'}), 201
-    except psycopg2.Error as e:
-        conn.rollback()
-        return jsonify({'error': str(e)}), 500
+    user_id = get_jwt_identity()['id']
+    query = '''
+            INSERT INTO ratings (prompt_id, rating, user_id) 
+            VALUES (%s, %s, %s)
+        '''
+    values = (prompt_id, rate, user_id)
+
+    if 10 >= rate >= -10:
+        try:
+            cur.execute(query, values)
+            conn.commit()
+            return jsonify({'message': f'Rating {rate} has been added to prompt'}), 201
+        except psycopg2.Error as e:
+            conn.rollback()
+            return jsonify({'error': str(e)}), 500
+    else:
+        return jsonify({'message': 'The rating must be between 10 and -10.'}), 400
