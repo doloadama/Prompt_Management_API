@@ -36,7 +36,7 @@ def add_prompt():
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("INSERT INTO temp_prompts (content, status, user_id, keyword) VALUES (%s, %s, %s, %s) RETURNING "
+        cur.execute("INSERT INTO prompts (content, status, user_id, keyword) VALUES (%s, %s, %s, %s) RETURNING "
                     "content",
                     (content, status, get_jwt_identity()['id'], keyword), )
         prompt = cur.fetchone()

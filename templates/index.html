@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <script src=""></script>
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="boite-connexion"><label>Username</label>
-        <input type="text">
-        <label>Password</label>
-        <input type="text">
+    <div class="container">
+        <h1>Login</h1>
+        <form method="post" action="{{ url_for('auth.login') }}">
+            <div class="msg">{{ msg }}</div>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <a href=""><input type="submit" value="Login"></a>
+        </form>
     </div>
 </body>
 </html>

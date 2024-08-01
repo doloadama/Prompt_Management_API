@@ -56,30 +56,21 @@ def admin_register():
 @admin_bp.route('/ApprovePrompt/<int:prompt_id>', methods=['PUT'])
 @admin_required
 def approve_prompt(prompt_id):
-    data = request.get_json()
-    if not data or 'status' not in data:
-        return jsonify({'error': 'Status is required'}), 400
-
-    status = data['status']
-    validated = "True"
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
         cur.execute("""
-                    INSERT INTO prompts (content, status, user_id, validated, keyword)
-                    SELECT content, %s, user_id, %s, keyword
-                    FROM temp_prompts
-                    WHERE id = %s AND status = 'en attente'
-                    RETURNING id
-                """, (status, validated, prompt_id))
+            UPDATE prompts
+            SET status = 'validated'
+            WHERE id = %s
+            RETURNING content;
+        """, (prompt_id,))
         approved_prompt = cur.fetchone()
+        conn.commit()
 
         if approved_prompt is None:
             return jsonify({'message': 'Prompt not found or not in en waiting status'}), 404
-
-        cur.execute("DELETE FROM temp_prompts WHERE id = %s", (prompt_id,))
-        conn.commit()
 
         return jsonify({'message': f'Prompt {prompt_id} approved and moved to prompts table'}), 200
     except psycopg2.Error as e:
@@ -89,7 +80,6 @@ def approve_prompt(prompt_id):
         cur.close()
         conn.close()
 
-
 @admin_bp.route('/RejectPrompt/<int:prompt_id>', methods=['PUT'])
 @admin_required
 def reject_prompt(prompt_id):
@@ -97,7 +87,7 @@ def reject_prompt(prompt_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("UPDATE temp_prompts SET status = 'rejected' WHERE id = %s RETURNING content", (prompt_id,))
+        cur.execute("UPDATE prompts SET status = 'rejected' WHERE id = %s RETURNING content", (prompt_id,))
         rejected_prompt = cur.fetchone()
         if rejected_prompt is None:
             return jsonify({'message': 'Prompt not found or already processed'}), 404
