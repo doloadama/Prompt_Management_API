@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 import psycopg2
 import psycopg2.extras
 from werkzeug.security import check_password_hash
@@ -24,17 +24,9 @@ def login():
         cur.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
 
-        if user['password_hash'] == password:
-            if user['role'] == 'admin':
-                access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
-                return jsonify({'access_token': access_token}), 200
-
-        elif user and check_password_hash(user['password_hash'], password):
-            if user['role'] in ['admin', 'user']:
-                access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
-                return jsonify({'access_token': access_token}), 200
-            else:
-                return jsonify({'message': 'Invalid role'}), 403
+        if user and check_password_hash(user['password_hash'], password):
+            access_token = create_access_token(identity={'id': user['id'], 'role': user['role']})
+            return jsonify({'access_token': access_token}), 200
         else:
             return jsonify({'message': 'Invalid username or password'}), 401
     except psycopg2.Error as e:
@@ -42,7 +34,6 @@ def login():
     finally:
         cur.close()
         conn.close()
-
 
 @auth_bp.route('/protected', methods=['GET'])
 @jwt_required()

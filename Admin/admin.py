@@ -52,7 +52,6 @@ def admin_register():
     else:
         return jsonify({'message': 'Role must be user'}), 400
 
-
 @admin_bp.route('/ApprovePrompt/<int:prompt_id>', methods=['PUT'])
 @admin_required
 def approve_prompt(prompt_id):
@@ -94,6 +93,68 @@ def reject_prompt(prompt_id):
 
         conn.commit()
         return jsonify({'message': f'Prompt {prompt_id} rejected and status updated in temp_prompts table'}), 200
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@admin_bp.route('/Modification_request/<int:prompt_id>', methods=['PUT'])
+@admin_required
+def modification_request(prompt_id):
+    data = request.get_json()
+    modification_request = data.get('modification_request')
+    status = 'À modifier'
+    conn = get_db()
+
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute(
+            'UPDATE prompts SET modification_request = %s, modification = TRUE, status = %s WHERE id = %s RETURNING *',
+            (modification_request, status, prompt_id)
+        )
+        conn.commit()
+        return jsonify({'message': 'Modification request updated successfully'}), 200
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@admin_bp.route('/CreateGroup', methods=['POST'])
+@admin_required
+def create_group():
+    data = request.get_json()
+    name = data.get('name')
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        cur.execute("INSERT INTO groups (name) VALUES (%s)", (name,))
+        cur.commit()
+        return jsonify({'message': 'Group created successfully'}), 201
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@admin_bp.route('/AddUsertoGroup', methods=['POST'])
+@admin_required
+def add_user_to_group():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    group_id = data.get('group_id')
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+    try:
+        cur.execute("UPDATE users SET group_id = %s WHERE id = %s", (group_id, user_id))
+        conn.commit()
+        return jsonify({'message': 'User added to group successfully'}), 200
     except psycopg2.Error as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 500

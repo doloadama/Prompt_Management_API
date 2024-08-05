@@ -64,21 +64,30 @@ def edit_prompt(prompt_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-    try:
-        cur.execute((content, status, prompt_id, get_jwt_identity()['id']),
-                    "UPDATE temp_prompts SET content = %s, status = %s WHERE id = %s AND user_id = %s RETURNING content")
-        updated_prompt = cur.fetchone()
-        if updated_prompt is None:
-            return jsonify({'message': 'Prompt not found or not authorized to edit'}), 404
+    cur.execute('SELECT modification, user_id FROM prompts WHERE id = %s', (prompt_id,))
+    modification = cur.fetchone()
 
-        conn.commit()
-        return jsonify({'message': updated_prompt['content']}), 200
-    except psycopg2.Error as e:
-        conn.rollback()
-        return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
+    user_id = modification['user_id']
+    status_mod = modification['modification']
+
+    if status_mod == True and user_id == get_jwt_identity()['id']:
+        try:
+            cur.execute((content, status, prompt_id, get_jwt_identity()['id']),
+                        "UPDATE prompts SET content = %s, status = %s WHERE id = %s AND user_id = %s RETURNING content")
+            updated_prompt = cur.fetchone()
+            if updated_prompt is None:
+                return jsonify({'message': 'Prompt not found or not authorized to edit'}), 404
+
+            conn.commit()
+            return jsonify({'message': updated_prompt['content']}), 200
+        except psycopg2.Error as e:
+            conn.rollback()
+            return jsonify({'error': str(e)}), 500
+        finally:
+            cur.close()
+            conn.close()
+    else:
+        return jsonify({'message': 'Prompt not found or not authorized to edit'}), 404
 
 
 @user_bp.route('/VotePrompt/<int:prompt_id>', methods=['PUT'])
@@ -86,6 +95,7 @@ def edit_prompt(prompt_id):
 def vote_prompt(prompt_id):
     data = request.get_json()
     vote_status = data.get('vote_status')
+    user_id = get_jwt_identity()['id']
 
     if not vote_status or vote_status not in ["en attente", "activer", "rappel", "A supprimer"]:
         return jsonify({'message': 'Invalid vote status'}), 400
@@ -94,8 +104,8 @@ def vote_prompt(prompt_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute("UPDATE temp_prompts SET status = %s WHERE id = %s",
-                    (vote_status, prompt_id))
+        cur.execute("INSERT INTO votes (vote_value, prompt_id, user_id) VALUES (%s, %s, %s)",
+                    (vote_status, prompt_id, user_id,))
         conn.commit()
 
         return jsonify({'message': f'Voted {vote_status} on prompt {prompt_id}'}), 200
@@ -108,13 +118,12 @@ def vote_prompt(prompt_id):
 
 
 @user_bp.route('/Display_all_Prompt', methods=['GET'])
-@user_required
 def display_prompt_all():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     try:
-        cur.execute('SELECT id, content FROM prompts')
+        cur.execute('SELECT * FROM prompts')
         prompts = cur.fetchall()
 
         return jsonify({'prompts': prompts}), 200
@@ -130,7 +139,6 @@ def display_prompt_all():
 
 
 @user_bp.route('/DisplayPrompt', methods=['GET'])
-@user_required
 def display_prompt():
     data = request.get_json()
     keyword = data.get('keyword')

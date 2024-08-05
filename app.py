@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from flask import Flask, render_template, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -15,6 +17,8 @@ CORS(app, resources={r'/*': {'origins': '*'}})
 
 # JWT Configuration
 app.config['JWT_SECRET_KEY'] = 'toto123'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)  # Set expiration to 1 hour
+
 jwt = JWTManager(app)
 
 # Register blueprints
